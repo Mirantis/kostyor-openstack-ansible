@@ -1,0 +1,3 @@
+[run]
+branch = true
+source = kostyor_openstack_ansible
