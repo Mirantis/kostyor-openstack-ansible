@@ -39,7 +39,7 @@ setup(
     dependency_links=[
         # Kostyor is not released yet, so in order to perform tests we
         # need to install it at least from master branch.
-        'git+https://github.com/sc68cal/Kostyor.git@feature/ansible-driver#egg=kostyor-dev',
+        'git+https://github.com/sc68cal/Kostyor.git#egg=kostyor-dev',
     ],
     entry_points={
         'kostyor.upgrades.drivers': [
