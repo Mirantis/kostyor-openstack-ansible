@@ -14,17 +14,35 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import glob
 
 from ansible.cli.playbook import PlaybookCLI
 from ansible.executor.playbook_executor import PlaybookExecutor
 from ansible.inventory import Inventory
 from ansible.parsing.dataloader import DataLoader
 from ansible.vars import VariableManager
+from ansible.utils.vars import combine_vars
 
 from kostyor.db import api as dbapi
 from kostyor.upgrades.drivers import base
 from kostyor.rpc.app import app
 from kostyor.rpc import tasks
+
+
+def _get_user_settings(loader):
+    settings = {}
+
+    # /etc/openstack_deploy is default and, by all means, hardcoded path
+    # to deployment settings. The dir contains user settings, where each
+    # file starts with 'user_' prefix and ends with '.yml' suffix.
+    pattern = os.path.join('/etc', 'openstack_deploy', 'user_*.yml')
+
+    for filename in glob.glob(pattern):
+        # Ansible may use different strategies of combining variables, so
+        # we need to use its function instead of '.update(...)' method.
+        settings = combine_vars(settings, loader.load_from_file(filename))
+
+    return settings
 
 
 def _get_component_from_service(service):
@@ -74,6 +92,7 @@ def _run_playbook(playbook, service, node):
     variable_manager = VariableManager()
     inventory = Inventory(loader, variable_manager)
     variable_manager.set_inventory(inventory)
+    variable_manager.extra_vars = _get_user_settings(loader)
 
     # OpenStack Ansible deploys control plane services in LXC containers,
     # and use those as native hosts in its inventory. However, from
