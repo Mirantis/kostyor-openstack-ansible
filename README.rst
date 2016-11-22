@@ -12,6 +12,30 @@ Want to try?
     $ [sudo] python -m pip install kostyor-openstack-ansible
 
 
+Prerequirements
+===============
+
+#. Celery worker that's going to execute OpenStack Ansible playbooks must
+   run on the deployment host.
+
+#. Celery worker that's going to execute OpenStack Ansible playbooks must
+   have defined environment variables from ``openstack-ansible.rc``.
+
+   In other words, if you run manually you've got to do:
+
+   .. code:: bash
+
+      # source /usr/local/bin/openstack-ansible.rc
+      # celery -A kostyor.rpc.app worker
+
+#. Celery worker that's going to execute OpenStack Ansible playbooks must
+   have installed Ansible in its environment. One may consider to use
+   a virtualenv created by OpenStack Ansible - ``/opt/ansible-runtime``.
+
+#. Celery worker that's going to execute OpenStack Ansible playbooks must
+   be ran from ``root``. Superuser privileges may not work.
+
+
 Links
 =====
 
