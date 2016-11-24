@@ -13,6 +13,20 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+# I feel incredibly wrong about these lines but it seems like the only
+# working solution right now. Celery uses its own fork of native
+# multiprocessing module, which is significantly diverged from the
+# version of Python 2.7. So when it come to start 'multiprocessing.Process'
+# instance from within Celery task, it simply fails due to inability to
+# retrieve some properties (e.g. _authkey) from '_current_process' since
+# they simply don't exist in 'billiard.Process.
+#
+# This is essential part of this driver, since Ansible internally use
+# multiprocessing.Process to do parallel execution.
+import multiprocessing
+import billiard
+multiprocessing.Process = billiard.Process
+
 import os
 import glob
 
