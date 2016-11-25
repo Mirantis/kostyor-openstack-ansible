@@ -17,6 +17,7 @@ import json
 import os
 
 import mock
+import pytest
 
 from ansible.inventory import Inventory
 from ansible.parsing.dataloader import DataLoader
@@ -164,6 +165,8 @@ class TestDriver(object):
         self.executor = patcher.start()
         self._patchers.append(patcher)
 
+        self.executor.return_value.run.return_value = 0
+
     def teardown(self):
         for patcher in self._patchers:
             patcher.stop()
@@ -233,3 +236,14 @@ class TestDriver(object):
                 })()
 
         self.executor.assert_not_called()
+
+    def test_raise_exception_on_error(self):
+        self.executor.return_value.run.return_value = 42
+
+        with pytest.raises(Exception) as excinfo:
+            self.test_start_upgrade_runs_playbook()
+
+        assert str(excinfo.value) == (
+            'Playbook "/opt/openstack-ansible/playbooks/os-nova-install.yml" '
+            'has been finished with errors. Exit code is "42".'
+        )
