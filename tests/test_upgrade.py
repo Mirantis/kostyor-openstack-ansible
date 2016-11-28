@@ -23,6 +23,8 @@ from ansible.inventory import Inventory
 from ansible.parsing.dataloader import DataLoader
 from ansible.vars import VariableManager
 
+from kostyor.rpc import app, tasks
+
 from kostyor_openstack_ansible import upgrade
 
 
@@ -150,6 +152,9 @@ class TestDriver(object):
     _inventory = _get_inventory_fixture('dynamic_inventory.json')
 
     def setup(self):
+        self._celery_eager = app.app.conf['CELERY_ALWAYS_EAGER']
+        app.app.conf['CELERY_ALWAYS_EAGER'] = True
+
         self._patchers = []
         self.driver = upgrade.Driver()
 
@@ -170,6 +175,58 @@ class TestDriver(object):
     def teardown(self):
         for patcher in self._patchers:
             patcher.stop()
+        app.app.conf['CELERY_ALWAYS_EAGER'] = self._celery_eager
+
+    @mock.patch('kostyor.rpc.tasks.execute.si', return_value=tasks.noop.si())
+    def test_pre_upgrade_hook(self, execute):
+        self.driver.pre_upgrade_hook(mock.Mock())()
+
+        execute.assert_called_once_with(
+            '/opt/openstack-ansible/scripts/bootstrap-ansible.sh',
+            cwd='/opt/openstack-ansible')
+
+        assert self.executor.call_args_list == [
+            mock.call(
+                playbooks=['/opt/openstack-ansible/scripts/upgrade-utilities'
+                           '/playbooks/ansible_fact_cleanup.yml'],
+                inventory=self.inventory,
+                variable_manager=mock.ANY,
+                loader=mock.ANY,
+                options=mock.ANY,
+                passwords={}),
+            mock.call(
+                playbooks=['/opt/openstack-ansible/scripts/upgrade-utilities'
+                           '/playbooks/deploy-config-changes.yml'],
+                inventory=self.inventory,
+                variable_manager=mock.ANY,
+                loader=mock.ANY,
+                options=mock.ANY,
+                passwords={}),
+            mock.call(
+                playbooks=['/opt/openstack-ansible/scripts/upgrade-utilities'
+                           '/playbooks/user-secrets-adjustment.yml'],
+                inventory=self.inventory,
+                variable_manager=mock.ANY,
+                loader=mock.ANY,
+                options=mock.ANY,
+                passwords={}),
+            mock.call(
+                playbooks=['/opt/openstack-ansible/scripts/upgrade-utilities'
+                           '/playbooks/pip-conf-removal.yml'],
+                inventory=self.inventory,
+                variable_manager=mock.ANY,
+                loader=mock.ANY,
+                options=mock.ANY,
+                passwords={}),
+            mock.call(
+                playbooks=['/opt/openstack-ansible/playbooks'
+                           '/repo-install.yml'],
+                inventory=self.inventory,
+                variable_manager=mock.ANY,
+                loader=mock.ANY,
+                options=mock.ANY,
+                passwords={}),
+        ]
 
     def test_start_upgrade_runs_playbook(self):
         with _host_ctx('compute1') as host:
