@@ -177,13 +177,19 @@ class TestDriver(object):
             patcher.stop()
         app.app.conf['CELERY_ALWAYS_EAGER'] = self._celery_eager
 
+    @mock.patch('kostyor_openstack_ansible.upgrade.os.chdir')
     @mock.patch('kostyor.rpc.tasks.execute.si', return_value=tasks.noop.si())
-    def test_pre_upgrade_hook(self, execute):
+    def test_pre_upgrade_hook(self, execute, chdir):
         self.driver.pre_upgrade_hook(mock.Mock())()
 
         execute.assert_called_once_with(
             '/opt/openstack-ansible/scripts/bootstrap-ansible.sh',
             cwd='/opt/openstack-ansible')
+
+        assert chdir.call_args_list == [
+            mock.call('/opt/openstack-ansible/playbooks'),
+            mock.call(os.getcwd()),
+        ]
 
         assert self.executor.call_args_list == [
             mock.call(
