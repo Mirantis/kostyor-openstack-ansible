@@ -44,7 +44,8 @@ setup(
     ],
     entry_points={
         'kostyor.upgrades.drivers': [
-            'openstack-ansible = kostyor_openstack_ansible.upgrade:Driver',
+            'openstack-ansible = kostyor_openstack_ansible.upgrades.ref:Driver',
+            'openstack-ansible-alt = kostyor_openstack_ansible.upgrades.alt:Driver',
         ],
     },
     classifiers=[
