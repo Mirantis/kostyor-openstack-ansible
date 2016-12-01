@@ -112,6 +112,7 @@ class Driver(base.UpgradeDriver):
 
         'cinder-api':                'os-cinder-install.yml',
         'cinder-scheduler':          'os-cinder-install.yml',
+        'cinder-volume':             'os-cinder-install.yml',
 
         'heat-api':                  'os-heat-install.yml',
         'heat-engine':               'os-heat-install.yml',
