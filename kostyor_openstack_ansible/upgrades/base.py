@@ -114,12 +114,50 @@ class Driver(base.UpgradeDriver):
         'cinder-scheduler':          'os-cinder-install.yml',
         'cinder-volume':             'os-cinder-install.yml',
 
+        'horizon-wsgi':              'os-horizon-install.yml',
+
         'heat-api':                  'os-heat-install.yml',
         'heat-engine':               'os-heat-install.yml',
         'heat-api-cfn':              'os-heat-install.yml',
         'heat-api-cloudwatch':       'os-heat-install.yml',
 
-        'horizon-wsgi':              'os-horizon-install.yml',
+        'ceilometer-collector':             'os-ceilometer-install.yml',
+        'ceilometer-agent-notification':    'os-ceilometer-install.yml',
+        'ceilometer-polling':               'os-ceilometer-install.yml',
+        'ceilometer-api':                   'os-ceilometer-install.yml',
+
+        'aodh-evaluator':   'os-aodh-install.yml',
+        'aodh-notifier':    'os-aodh-install.yml',
+        'aodh-listener':    'os-aodh-install.yml',
+        'aodh-api':         'os-aodh-install.yml',
+
+        'gnocchi-statsd':   'os-gnocchi-install.yml',
+        'gnocchi-metricd':  'os-gnocchi-install.yml',
+        'gnocchi-api':      'os-gnocchi-install.yml',
+
+        'swift-proxy-server':           'os-swift-install.yml',
+        'swift-account-auditor':        'os-swift-install.yml',
+        'swift-account-reaper':         'os-swift-install.yml',
+        'swift-account-replicator':     'os-swift-install.yml',
+        'swift-account-server':         'os-swift-install.yml',
+        'swift-account-server':         'os-swift-install.yml',
+        'swift-container-auditor':      'os-swift-install.yml',
+        'swift-container-reconciler':   'os-swift-install.yml',
+        'swift-container-replicator':   'os-swift-install.yml',
+        'swift-container-server':       'os-swift-install.yml',
+        'swift-container-sync':         'os-swift-install.yml',
+        'swift-container-updater':      'os-swift-install.yml',
+        'swift-object-auditor':         'os-swift-install.yml',
+        'swift-object-expirer':         'os-swift-install.yml',
+        'swift-object-reconstructor':   'os-swift-install.yml',
+        'swift-object-replicator':      'os-swift-install.yml',
+        'swift-object-server':          'os-swift-install.yml',
+        'swift-object-server':          'os-swift-install.yml',
+        'swift-object-updater':         'os-swift-install.yml',
+
+        'ironic-inspector':     'os-ironic-install.yml',
+        'ironic-conductor':     'os-ironic-install.yml',
+        'ironic-api':           'os-ironic-install.yml',
     }
 
     # A path to OpenStack Ansible sources.
