@@ -47,6 +47,10 @@ setup(
             'openstack-ansible = kostyor_openstack_ansible.upgrades.ref:Driver',
             'openstack-ansible-alt = kostyor_openstack_ansible.upgrades.alt:Driver',
         ],
+
+        'kostyor.discovery_drivers': [
+            'openstack-ansible = kostyor_openstack_ansible.discover:Driver',
+        ],
     },
     classifiers=[
         'Intended Audience :: Developers',

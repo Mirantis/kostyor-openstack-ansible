@@ -21,7 +21,7 @@ import pytest
 from kostyor.rpc import app, tasks
 from kostyor_openstack_ansible.upgrades import alt
 
-from .common import get_fixture, get_inventory_instance, host_ctx
+from ..common import get_fixture, get_inventory_instance, host_ctx
 
 
 class TestDriver(object):
