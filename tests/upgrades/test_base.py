@@ -15,7 +15,7 @@
 
 from kostyor_openstack_ansible.upgrades import base
 
-from .common import get_fixture, get_inventory_instance
+from ..common import get_fixture, get_inventory_instance
 
 
 class TestGetServiceContainersForHost(object):
