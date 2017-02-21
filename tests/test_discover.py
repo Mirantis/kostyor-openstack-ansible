@@ -14,6 +14,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import mock
+import pytest
 
 from kostyor.rpc import app
 from kostyor_openstack_ansible import discover
@@ -25,27 +26,21 @@ class TestDriver(object):
 
     _inventory = get_fixture('dynamic_inventory.json')
 
-    def setup(self):
-        self._celery_eager = app.app.conf['CELERY_ALWAYS_EAGER']
-        app.app.conf['CELERY_ALWAYS_EAGER'] = True
+    @pytest.fixture(autouse=True)
+    def use_sync_tasks(self, monkeypatch):
+        monkeypatch.setattr(app.app.conf, 'CELERY_ALWAYS_EAGER', True)
 
-        self._patchers = []
-        self.driver = discover.Driver()
-
-        patcher = mock.patch(
+    @pytest.fixture(autouse=True)
+    def use_fake_inventory(self, monkeypatch):
+        monkeypatch.setattr(
             'kostyor_openstack_ansible.discover.Inventory',
-            return_value=get_inventory_instance(self._inventory)
+            mock.Mock(
+                return_value=get_inventory_instance(self._inventory)
+            )
         )
-        self.inventory = patcher.start()()
-        self._patchers.append(patcher)
-
-    def teardown(self):
-        for patcher in self._patchers:
-            patcher.stop()
-        app.app.conf['CELERY_ALWAYS_EAGER'] = self._celery_eager
 
     def test_discover(self):
-        info = self.driver.discover()
+        info = discover.Driver().discover()
 
         for hostname, services in info['hosts'].items():
             info['hosts'][hostname] = sorted(services, key=lambda v: v['name'])

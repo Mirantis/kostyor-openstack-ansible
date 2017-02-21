@@ -28,31 +28,33 @@ class TestDriver(object):
 
     _inventory = get_fixture('dynamic_inventory.json')
 
-    def setup(self):
-        self._celery_eager = app.app.conf['CELERY_ALWAYS_EAGER']
-        app.app.conf['CELERY_ALWAYS_EAGER'] = True
+    @pytest.fixture(autouse=True)
+    def use_sync_tasks(self, monkeypatch):
+        monkeypatch.setattr(app.app.conf, 'CELERY_ALWAYS_EAGER', True)
 
-        self._patchers = []
-        self.driver = ref.Driver()
+    @pytest.fixture(autouse=True)
+    def use_fake_inventory(self, monkeypatch):
+        self.inventory = get_inventory_instance(self._inventory)
 
-        patcher = mock.patch(
+        monkeypatch.setattr(
             'kostyor_openstack_ansible.upgrades.ref.Inventory',
-            return_value=get_inventory_instance(self._inventory)
+            mock.Mock(
+                return_value=self.inventory
+            )
         )
-        self.inventory = patcher.start()()
-        self._patchers.append(patcher)
 
-        patcher = mock.patch(
-            'kostyor_openstack_ansible.upgrades.ref.PlaybookExecutor')
-        self.executor = patcher.start()
-        self._patchers.append(patcher)
-
+    @pytest.fixture(autouse=True)
+    def use_fake_executor(self, monkeypatch):
+        self.executor = mock.Mock()
         self.executor.return_value.run.return_value = 0
 
-    def teardown(self):
-        for patcher in self._patchers:
-            patcher.stop()
-        app.app.conf['CELERY_ALWAYS_EAGER'] = self._celery_eager
+        monkeypatch.setattr(
+            'kostyor_openstack_ansible.upgrades.ref.PlaybookExecutor',
+            self.executor
+        )
+
+    def setup(self):
+        self.driver = ref.Driver()
 
     @mock.patch('kostyor_openstack_ansible.upgrades.ref.os.chdir')
     @mock.patch('kostyor.rpc.tasks.execute.si', return_value=tasks.noop.si())
