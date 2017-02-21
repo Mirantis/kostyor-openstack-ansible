@@ -112,7 +112,6 @@ _SERVICES_BY_INVENTORY_GROUPS = {
         'swift-account-reaper',
         'swift-account-replicator',
         'swift-account-server',
-        'swift-account-server',
     ],
     'swift_cont': [
         'swift-container-auditor',
@@ -127,7 +126,6 @@ _SERVICES_BY_INVENTORY_GROUPS = {
         'swift-object-expirer',
         'swift-object-reconstructor',
         'swift-object-replicator',
-        'swift-object-server',
         'swift-object-server',
         'swift-object-updater',
     ],
