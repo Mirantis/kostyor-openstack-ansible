@@ -35,13 +35,13 @@ def _run_playbook(self, playbook, cwd=None, ignore_errors=False):
 
 
 @app.task(bind=True, base=tasks.execute.__class__)
-def _run_playbook_for(self, playbook, node, service, cwd=None,
+def _run_playbook_for(self, playbook, nodes, service, cwd=None,
                       ignore_errors=False):
     inventory = Inventory(DataLoader(), VariableManager())
     hosts = [
         host.get_vars()['inventory_hostname']
-        for host in base.get_component_hosts_on_node(
-            inventory, service, node
+        for host in base.get_component_hosts_on_nodes(
+            inventory, service, nodes
         )
     ]
 

@@ -21,7 +21,7 @@ import pytest
 from kostyor.rpc import app, tasks
 from kostyor_openstack_ansible.upgrades import ref
 
-from ..common import get_fixture, get_inventory_instance, host_ctx
+from ..common import get_fixture, get_inventory_instance, get_hosts
 
 
 class TestDriver(object):
@@ -58,8 +58,8 @@ class TestDriver(object):
 
     @mock.patch('kostyor_openstack_ansible.upgrades.ref.os.chdir')
     @mock.patch('kostyor.rpc.tasks.execute.si', return_value=tasks.noop.si())
-    def test_pre_upgrade_hook(self, execute, chdir):
-        self.driver.pre_upgrade_hook(mock.Mock())()
+    def test_pre_upgrade(self, execute, chdir):
+        self.driver.pre_upgrade()()
 
         execute.assert_called_once_with(
             '/opt/openstack-ansible/scripts/bootstrap-ansible.sh',
@@ -113,14 +113,8 @@ class TestDriver(object):
                 passwords={}),
         ]
 
-    def test_start_upgrade_runs_playbook(self):
-        with host_ctx('compute1') as host:
-            self.driver.start_upgrade(
-                mock.Mock(),
-                {
-                    'name': 'nova-compute',
-                    'host_id': host['id'],
-                })()
+    def test_start_runs_playbook(self):
+        self.driver.start({'name': 'nova-compute'}, get_hosts('compute1'))()
 
         self.executor.assert_called_once_with(
             playbooks=['/opt/openstack-ansible/playbooks/os-nova-install.yml'],
@@ -135,20 +129,30 @@ class TestDriver(object):
             'compute1',
         ])
 
-    def test_start_upgrade_runs_playbook_once_on_one_host(self):
-        with host_ctx('infra2') as host:
-            self.driver.start_upgrade(
-                mock.Mock(),
-                {
-                    'name': 'nova-api',
-                    'host_id': host['id'],
-                })()
-            self.driver.start_upgrade(
-                mock.Mock(),
-                {
-                    'name': 'nova-conductor',
-                    'host_id': host['id'],
-                })()
+    def test_start_runs_playbook_on_few_hosts(self):
+        self.driver.start(
+            {'name': 'horizon-wsgi'}, get_hosts('infra1', 'infra2'))()
+
+        self.executor.assert_called_once_with(
+            playbooks=[
+                '/opt/openstack-ansible/playbooks/os-horizon-install.yml'],
+            inventory=self.inventory,
+            variable_manager=mock.ANY,
+            loader=mock.ANY,
+            options=mock.ANY,
+            passwords={},
+        )
+
+        assert set([h.get_name() for h in self.inventory.get_hosts()]) == set([
+            'infra1_horizon_container-afb604da',
+            'infra2_horizon_container-b7a45742',
+        ])
+
+    def test_start_runs_playbook_once_on_one_host(self):
+        hosts = get_hosts('infra2')
+
+        self.driver.start({'name': 'nova-api'}, hosts)()
+        self.driver.start({'name': 'nova-conductor'}, hosts)()
 
         self.executor.assert_called_once_with(
             playbooks=['/opt/openstack-ansible/playbooks/os-nova-install.yml'],
@@ -168,14 +172,34 @@ class TestDriver(object):
             'infra2_nova_scheduler_container-ea104a41',
         ])
 
-    def test_start_upgrade_skip_not_supported_service(self):
-        with host_ctx('infra1') as host:
-            self.driver.start_upgrade(
-                mock.Mock(),
-                {
-                    'name': 'not-supported-service',
-                    'host_id': host['id'],
-                })()
+    def test_start_runs_playbook_once_on_few_hosts(self):
+        host1, host2 = get_hosts('infra1', 'infra2')
+
+        # The second .start(...) must trigger playbook only for host2 as
+        # host1 was upgrades by first call.
+        self.driver.start({'name': 'nova-api'}, [host1])()
+        self.driver.start({'name': 'nova-conductor'}, [host1, host2])()
+
+        self.executor.assert_called_with(
+            playbooks=['/opt/openstack-ansible/playbooks/os-nova-install.yml'],
+            inventory=self.inventory,
+            variable_manager=mock.ANY,
+            loader=mock.ANY,
+            options=mock.ANY,
+            passwords={},
+        )
+
+        assert set([h.get_name() for h in self.inventory.get_hosts()]) == set([
+            'infra2_nova_api_metadata_container-a542f3a5',
+            'infra2_nova_api_os_compute_container-d088a5c5',
+            'infra2_nova_cert_container-f4bebee6',
+            'infra2_nova_conductor_container-c9d5c8ec',
+            'infra2_nova_console_container-14f4435d',
+            'infra2_nova_scheduler_container-ea104a41',
+        ])
+
+    def test_start_skip_not_supported_service(self):
+        self.driver.start({'name': 'unknown-service'}, get_hosts('infra1'))()
 
         self.executor.assert_not_called()
 
@@ -183,7 +207,7 @@ class TestDriver(object):
         self.executor.return_value.run.return_value = 42
 
         with pytest.raises(Exception) as excinfo:
-            self.test_start_upgrade_runs_playbook()
+            self.test_start_runs_playbook()
 
         assert str(excinfo.value) == (
             'Playbook "/opt/openstack-ansible/playbooks/os-nova-install.yml" '

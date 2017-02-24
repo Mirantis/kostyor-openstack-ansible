@@ -15,6 +15,7 @@
 
 import json
 import os
+import uuid
 
 import mock
 
@@ -56,26 +57,13 @@ def get_inventory_instance(inventory, popen, _):
     return Inventory(loader, VariableManager(), 'fake_dynamic_inventory.py')
 
 
-class host_ctx(object):
-    """A simple context manager that mocks dbapi.get_host() to return a host
-    with a specified hostname. It's important since this dbapi method is used
-    internally to determine hostname of the node to be upgraded.
-
-    :param hostname: a hostname of the host to be returned by dbapi.get_host()
-    :type hostname: str
-    """
-
-    def __init__(self, hostname):
-        self._patcher = mock.patch(
-            'kostyor_openstack_ansible.upgrades.base.dbapi.get_host',
-            return_value={
-                'id': '1ecdf50f-16c2-4f7e-ba10-77bfeb2d2062',
-                'cluster_id': '254dbd94-b426-484e-9155-4b60736cdef2',
-                'hostname': hostname,
-            })
-
-    def __enter__(self):
-        return self._patcher.start()
-
-    def __exit__(self, type_, value, traceback):
-        self._patcher.stop()
+def get_hosts(*hostnames):
+    cluster_id = str(uuid.uuid4())
+    return [
+        {
+            'id': str(uuid.uuid4()),
+            'cluster_id': cluster_id,
+            'hostname': hostname
+        }
+        for hostname in hostnames
+    ]

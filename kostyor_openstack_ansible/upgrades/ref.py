@@ -160,10 +160,10 @@ def _run_playbook(playbook, cwd=None, ignore_errors=False):
 
 
 @app.task
-def _run_playbook_for(playbook, host, service, cwd=None, ignore_errors=False):
+def _run_playbook_for(playbook, hosts, service, cwd=None, ignore_errors=False):
     return _run_playbook_impl(
         playbook,
-        lambda inv: base.get_component_hosts_on_node(inv, service, host),
+        lambda inv: base.get_component_hosts_on_nodes(inv, service, hosts),
         cwd=cwd,
         ignore_errors=ignore_errors
     )
