@@ -140,3 +140,78 @@ class TestDriver(object):
                 ],
             }
         }
+
+
+class TestDriverForAIO(object):
+
+    _inventory = get_fixture('dynamic_inventory_aio.json')
+
+    @pytest.fixture(autouse=True)
+    def use_sync_tasks(self, monkeypatch):
+        monkeypatch.setattr(app.app.conf, 'CELERY_ALWAYS_EAGER', True)
+
+    @pytest.fixture(autouse=True)
+    def use_fake_inventory(self, monkeypatch):
+        monkeypatch.setattr(
+            'kostyor_openstack_ansible.discover.Inventory',
+            mock.Mock(
+                return_value=get_inventory_instance(self._inventory)
+            )
+        )
+
+    def test_discover(self):
+        info = discover.Driver().discover()
+
+        for hostname, services in info['hosts'].items():
+            info['hosts'][hostname] = sorted(services, key=lambda v: v['name'])
+
+        assert info == {
+            'hosts': {
+                'aio1': [
+                    {'name': 'cinder-api'},
+                    {'name': 'cinder-scheduler'},
+                    {'name': 'cinder-volume'},
+                    {'name': 'glance-api'},
+                    {'name': 'glance-registry'},
+                    {'name': 'heat-api'},
+                    {'name': 'heat-api-cfn'},
+                    {'name': 'heat-api-cloudwatch'},
+                    {'name': 'heat-engine'},
+                    {'name': 'horizon-wsgi'},
+                    {'name': 'keystone-wsgi-admin'},
+                    {'name': 'keystone-wsgi-public'},
+                    {'name': 'neutron-dhcp-agent'},
+                    {'name': 'neutron-l3-agent'},
+                    {'name': 'neutron-linuxbridge-agent'},
+                    {'name': 'neutron-metadata-agent'},
+                    {'name': 'neutron-metering-agent'},
+                    {'name': 'neutron-openvswitch-agent'},
+                    {'name': 'neutron-server'},
+                    {'name': 'nova-api-metadata'},
+                    {'name': 'nova-api-os-compute'},
+                    {'name': 'nova-cert'},
+                    {'name': 'nova-compute'},
+                    {'name': 'nova-conductor'},
+                    {'name': 'nova-consoleauth'},
+                    {'name': 'nova-scheduler'},
+                    {'name': 'nova-spicehtml5proxy'},
+                    {'name': 'swift-account-auditor'},
+                    {'name': 'swift-account-reaper'},
+                    {'name': 'swift-account-replicator'},
+                    {'name': 'swift-account-server'},
+                    {'name': 'swift-container-auditor'},
+                    {'name': 'swift-container-reconciler'},
+                    {'name': 'swift-container-replicator'},
+                    {'name': 'swift-container-server'},
+                    {'name': 'swift-container-sync'},
+                    {'name': 'swift-container-updater'},
+                    {'name': 'swift-object-auditor'},
+                    {'name': 'swift-object-expirer'},
+                    {'name': 'swift-object-reconstructor'},
+                    {'name': 'swift-object-replicator'},
+                    {'name': 'swift-object-server'},
+                    {'name': 'swift-object-updater'},
+                    {'name': 'swift-proxy-server'},
+                ],
+            }
+        }

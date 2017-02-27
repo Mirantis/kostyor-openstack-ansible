@@ -174,8 +174,7 @@ class TestDriver(object):
         with pytest.raises(Exception) as excinfo:
             self.test_start_upgrade_runs_playbook()
 
-        assert str(excinfo.value) == (
-            'Command \'/usr/local/bin/openstack-ansible '
-            '/opt/openstack-ansible/playbooks/os-nova-install.yml -l '
-            'compute1\' returned non-zero exit status 42'
-        )
+        excinfo.match(
+            r'Command \'/usr/local/bin/openstack-ansible '
+            r'/opt/openstack-ansible/playbooks/os-nova-install.yml -l '
+            r'compute1\' returned non-zero exit status 42\.?')
