@@ -163,6 +163,19 @@ def _get_hosts():
             continue
 
         for host in group.get_hosts():
+            # In case of All-in-One setup, some services might allocated few
+            # times on the same host. For instance, Neutron L2 agent should
+            # run on baremetal host with nova-compute as well as inside
+            # Nuetron control plane containers. From Kostyor POV, we are not
+            # interested in such details so we need to deduplicate service
+            # entries.
+            to_add = filter(
+                lambda candidate: not bool(list(filter(
+                    lambda service: service['name'] == candidate,
+                    rv[host.get_vars()['physical_host']]
+                ))),
+                services)
+
             # TODO: Process services to be added as not of them may be
             #       applied to the current setup. E.g., Neutron may be
             #       configured to use openvswitch instead of linux bridges,
@@ -170,7 +183,7 @@ def _get_hosts():
             #       upgrade procedure, though, since services are used
             #       to build an upgrade order and no more.
             rv[host.get_vars()['physical_host']].extend((
-                {'name': service} for service in services
+                {'name': service} for service in to_add
             ))
 
     return rv
