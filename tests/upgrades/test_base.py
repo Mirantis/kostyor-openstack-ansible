@@ -25,23 +25,37 @@ class TestGetServiceContainersForHost(object):
     def test_only_infra1_keystone_container(self):
         inventory = get_inventory_instance(self._inventory)
 
-        component_hosts = base.get_component_hosts_on_node(
+        component_hosts = base.get_component_hosts_on_nodes(
             inventory,
             {'name': 'keystone-wsgi-admin'},
-            {'hostname': 'infra1'},
+            [{'hostname': 'infra1'}],
         )
 
         assert set([host.get_name() for host in component_hosts]) == set([
             'infra1_keystone_container-4d65b5ea',
         ])
 
+    def test_only_infra1_and_infra2_horizon_container(self):
+        inventory = get_inventory_instance(self._inventory)
+
+        component_hosts = base.get_component_hosts_on_nodes(
+            inventory,
+            {'name': 'horizon-wsgi'},
+            [{'hostname': 'infra1'}, {'hostname': 'infra2'}],
+        )
+
+        assert set([host.get_name() for host in component_hosts]) == set([
+            'infra1_horizon_container-afb604da',
+            'infra2_horizon_container-b7a45742',
+        ])
+
     def test_only_infra2_nova_containers(self):
         inventory = get_inventory_instance(self._inventory)
 
-        component_hosts = base.get_component_hosts_on_node(
+        component_hosts = base.get_component_hosts_on_nodes(
             inventory,
             {'name': 'nova-conductor'},
-            {'hostname': 'infra2'},
+            [{'hostname': 'infra2'}],
         )
 
         hosts = set([host.get_name() for host in component_hosts])
@@ -57,10 +71,10 @@ class TestGetServiceContainersForHost(object):
     def test_only_compute1_nova_on_host(self):
         inventory = get_inventory_instance(self._inventory)
 
-        component_hosts = base.get_component_hosts_on_node(
+        component_hosts = base.get_component_hosts_on_nodes(
             inventory,
             {'name': 'nova-compute'},
-            {'hostname': 'compute1'},
+            [{'hostname': 'compute1'}],
         )
 
         assert set([host.get_name() for host in component_hosts]) == set([
@@ -70,10 +84,10 @@ class TestGetServiceContainersForHost(object):
     def test_no_keystone_on_compute(self):
         inventory = get_inventory_instance(self._inventory)
 
-        component_hosts = base.get_component_hosts_on_node(
+        component_hosts = base.get_component_hosts_on_nodes(
             inventory,
             {'name': 'keystone-wsgi-admin'},
-            {'hostname': 'compute1'},
+            [{'hostname': 'compute1'}],
         )
 
         assert set([host.get_name() for host in component_hosts]) == set([])

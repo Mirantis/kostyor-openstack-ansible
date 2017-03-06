@@ -14,10 +14,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import copy
 
 import celery
 
-from kostyor.db import api as dbapi
 from kostyor.rpc import tasks
 from kostyor.upgrades.drivers import base
 
@@ -28,29 +28,35 @@ def _get_component_from_service(service):
     return service['name'].split('-')[0]
 
 
-def get_component_hosts_on_node(inventory, service, host):
+def get_component_hosts_on_nodes(inventory, service, nodes):
     component = _get_component_from_service(service)
-    variables = inventory.get_vars(host['hostname'])
-    hostgroup = inventory.get_group(variables['container_types'])
+    rv = []
 
-    # Despite the fact that 'container_types' host variable always exists,
-    # it may points to non-existing group. For instance, compute hosts
-    # have 'container_types=computeX-host_containers' but the group
-    # doesn't exist within inventory.
-    if hostgroup is not None:
-        containers = hostgroup.get_hosts()
-    else:
-        containers = []
+    for node in nodes:
+        variables = inventory.get_vars(node['hostname'])
+        hostgroup = inventory.get_group(variables['container_types'])
 
-    # Not all services are running in containers, so we want to add the
-    # host itself into the list.
-    hosts = containers + inventory.get_hosts(host['hostname'])
-    service_hosts = inventory.get_group(component + '_all').get_hosts()
+        # Despite the fact that 'container_types' host variable always exists,
+        # it may points to non-existing group. For instance, compute hosts
+        # have 'container_types=computeX-host_containers' but the group
+        # doesn't exist within inventory.
+        if hostgroup is not None:
+            containers = hostgroup.get_hosts()
+        else:
+            containers = []
 
-    # Herer's the trick: intersection between node hosts and service hosts
-    # (which include hosts from different nodes) gives ua only service
-    # hosts on a given node.
-    return list(set(hosts) & set(service_hosts))
+        # Here's the trick: intersection between "hosts available on the node"
+        # and "hosts where the service is running" gives us only those hosts
+        # of the node where the service is running.
+        rv.extend(list(
+            # Not all services are running in containers, so we need to take
+            # the node itself into account.
+            set(containers + inventory.get_hosts(node['hostname']))
+            &
+            set(inventory.get_group(component + '_all').get_hosts())
+        ))
+
+    return rv
 
 
 class Driver(base.UpgradeDriver):
@@ -144,7 +150,7 @@ class Driver(base.UpgradeDriver):
         #:   (host, playbook) -> is-executed
         self._executions = {}
 
-    def pre_upgrade_hook(self, upgrade_task):
+    def pre_upgrade(self):
         utilities = os.path.join(
             self._root, 'scripts', 'upgrade-utilities', 'playbooks')
         playbooks = os.path.join(self._root, 'playbooks')
@@ -197,20 +203,24 @@ class Driver(base.UpgradeDriver):
             ),
         ])
 
-    def start_upgrade(self, upgrade_task, service):
-        # Kostyor's model may contain information about more services
-        # than we support. It seems reasonable to do not fail on such
-        # services and skip it for now.
+    def start(self, service, hosts):
+        # Kostyor's model may contain services we do not support yet. If
+        # such one is passed then do nothing. It seems reasonable to ignore
+        # and let users to handle it themselves.
         if service['name'] not in self._playbooks:
             return tasks.noop.si()
 
-        # If playbook was executed on the host, then do nothing since.
-        # This is a general case for this driver as long as one playbook
-        # upgrades the whole service at once.
-        key = service['host_id'], self._playbooks[service['name']]
-        if self._executions.get(key):
+        # Do not execute a playbook second time on the same host. This might
+        # happened pretty often as OpenStack Ansible playbooks upgrades
+        # the whole service at once rather than its separate parts.
+        for host in copy.copy(hosts):
+            key = host['id'], self._playbooks[service['name']]
+            if self._executions.get(key):
+                hosts.remove(host)
+            self._executions[key] = True
+
+        if not hosts:
             return tasks.noop.si()
-        self._executions[key] = True
 
         return self._run_playbook_for.si(
             os.path.join(
@@ -223,24 +233,6 @@ class Driver(base.UpgradeDriver):
             # baremetal node-by-node upgrade and we don't want to know about
             # containers. So we need to limit playbook execution only to
             # a baremetal node and its containers.
-            dbapi.get_host(service['host_id']),
+            hosts,
             service,
         )
-
-    def stop_upgrade(self, upgrade_task, service):
-        raise NotImplementedError()
-
-    def pause_upgrade(self, upgrade_task, service):
-        raise NotImplementedError()
-
-    def continue_upgrade(self, upgrade_task, service):
-        raise NotImplementedError()
-
-    def cancel_upgrade(self, upgrade_task, service):
-        raise NotImplementedError()
-
-    def rollback_upgrade(self, upgrade_task, service):
-        raise NotImplementedError()
-
-    def supports_upgrade_rollback(self):
-        return False
